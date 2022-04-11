@@ -10,8 +10,9 @@ from discord.ext.commands.bot import Bot
 
 from util import log, update_guilds, load_codes
 
+
 # noinspection PyDunderSlots
-class PixlBot(Bot, ABC):
+class DroneOS(Bot, ABC):
     config = None
     ready = False
     sentry = None
@@ -94,6 +95,6 @@ class PixlBot(Bot, ABC):
 with open('config.yml', 'r') as file:
     conf = yaml.safe_load(file)
 
-bot = PixlBot(bot_config=conf)
+bot = DroneOS(bot_config=conf)
 atexit.register(bot.shutdown)
 bot.run(conf['system']['bot_token'])
