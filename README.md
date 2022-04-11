@@ -1,0 +1,1 @@
+Lapinesoft DroneOS is a drone management system for Discord running on the Pixlbot codebase.

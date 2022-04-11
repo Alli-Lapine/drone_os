@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+py-cord = { git = "https://github.com/Pycord-Development/pycord", ref = "master" }
+sentry-sdk = "*"
+blitzdb = "~=0.4.4"
+PyYAML = "==6.0"
+requests = "*"
+asynctest = "*"
+
+[dev-packages]
+pytest = "*"
+magicmock = "*"
+pipenv = "*"
+pytest-asyncio = "*"
+
+[requires]
+python_version = "3.8"

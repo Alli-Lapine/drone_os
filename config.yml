@@ -1,0 +1,9 @@
+system:
+  log_level: DEBUG
+  bot_token: OTU2NzExNjU0NzYxMDYyNDMy.Yj0NKQ.EJY6_9_68yuSc5iAOJWPCEIJmXs
+  command_prefix: '!'
+  plugins:
+    - cogs.registration
+    - cogs.filter
+  guilds:
+    - 951905424922275891
