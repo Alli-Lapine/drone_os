@@ -50,7 +50,7 @@ class Filter(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        bot.logger.info("filter v2.8 ready")
+        bot.logger.info("filter v2.9.2 ready")
 
     @filtergrp.command(name="enable_here", description="Allow automatic drone speech optimizations in this channel",
                        guild_ids=guilds, default_permission=False, permissions=[permissions.has_role('Director')])
@@ -167,7 +167,6 @@ class Filter(commands.Cog):
         Storage.backend.save(c)
         await ctx.respond(embed=mkembed('done', f'Speech optimizations unlocked in {chan.mention}'))
 
-
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         if not msg.content:
@@ -249,26 +248,54 @@ class Filter(commands.Cog):
         droneid = drone['droneid']
         hivesym = hivemap.get(drone.get('hive'), '☼')
         content = msg.content.replace(f"{droneid} :: ", '')
-        # emotxt = await self.handle_emojis(msg)
-        # content = content.replace(emotxt, '')
+
         content = await self.handle_filter(content, drone, msg)
+        content_list = [
+            droneid,
+            hivesym,
+            await self.format_code(content, drone),
+            content
+        ]
+
+        if msg.reference:
+            mrr = msg.reference.resolved
+            reply_embed = discord.Embed(
+                color=discord.Color.green(),
+                description=f"[Reply to]({mrr.jump_url}): {mrr.content}"
+            ).set_author(
+                # Webhook bot messages are Users rather than Members and have no nick
+                name=mrr.author.nick if isinstance(msg.reference.resolved.author, discord.Member) else mrr.author.name,
+                icon_url=msg.reference.resolved.author.avatar.url
+            )
+        else:
+            reply_embed = None
+
+        out_content = ""
+        for i, v in enumerate(content_list):
+            if v:
+                out_content += f"{v} :: " if i < len(content_list)-1 else f"{v}"
+
         await hook.send(
             username=msg.author.nick,
-            content=f"{droneid} :: {hivesym} :: {content}",
-            avatar_url=msg.author.avatar.url
+            content=out_content,
+            avatar_url=msg.author.avatar.url,
+            embed=reply_embed
         )
         await msg.delete()
         return
 
     @staticmethod
     async def handle_filter(content: str, drone: RegisteredDrone, msg: discord.Message) -> str:
+        return content
+
+    @staticmethod
+    async def format_code(content: str, drone: RegisteredDrone) -> Optional[str]:
         if drone:
-            c = aget(re.findall(r'^(\d{3})(.*)$', content), 0, None)
+            c = aget(re.findall(r'^(.{3,4})(.*)$', content), 0, None)
             if c:
                 if c[0] in codes.keys():
-                    infix = codes[c[0]][-1]
-                    content = f"Code {c[0]} :: {codes[c[0]]} {c[1] if aget(c,1,None).lstrip(' ') else ''}"
-        return content
+                    return f"Code {c[0]} :: {codes[c[0]]}"
+        return None
 
 
 def setup(bot):
