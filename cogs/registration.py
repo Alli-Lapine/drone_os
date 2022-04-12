@@ -2,8 +2,10 @@ import re
 from typing import List, Optional
 
 import discord
-from discord.commands import SlashCommandGroup, permissions
+from discord.commands import SlashCommandGroup, permissions, Option, AutocompleteContext
 from discord.ext import commands
+
+import util
 from util import guilds, mkembed
 from util.storage import RegisteredDrone, Storage
 
@@ -64,6 +66,20 @@ class Registration(commands.Cog):
                                           f"```\nDrone {drone_id} ({ctx.author}) has left your hive.```",
                                           title="Drone disconnected",
                                           color=discord.Color.red()))
+
+    @registration.command(name='sethive', description='Set which hive you are a member of')
+    async def sethive(self, ctx: discord.ApplicationContext, hive: Option(str, choices=util.hivemap.keys())):
+        await ctx.defer()
+        try:
+            drone = Storage.backend.get(RegisteredDrone, {'discordid': ctx.author.id})
+            drone_id = drone['droneid']
+        except RegisteredDrone.DoesNotExist:
+            await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
+            return
+        drone['hive'] = hive
+        Storage.backend.save(drone)
+        await ctx.respond(embed=mkembed('done', f"Your hive set to {hive} ({util.hivemap[hive]})"))
+
 
 
 def setup(bot):
