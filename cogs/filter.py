@@ -248,14 +248,18 @@ class Filter(commands.Cog):
         droneid = drone['droneid']
         hivesym = hivemap.get(drone.get('hive'), '☼')
         content = msg.content.replace(f"{droneid} :: ", '')
+        code = await self.format_code(content, drone)
 
+        if aget(code, 0, None):
+            content = content.replace(code[1], '')
         content = await self.handle_filter(content, drone, msg)
         content_list = [
             droneid,
             hivesym,
-            await self.format_code(content, drone),
+            code[0],
             content
         ]
+        content_list = list(filter(None, content_list))  # Strip Nones so we construct the output correctly
 
         if msg.reference:
             mrr = msg.reference.resolved
@@ -289,13 +293,13 @@ class Filter(commands.Cog):
         return content
 
     @staticmethod
-    async def format_code(content: str, drone: RegisteredDrone) -> Optional[str]:
+    async def format_code(content: str, drone: RegisteredDrone) -> (Optional[str], Optional[str]):
         if drone:
             c = aget(re.findall(r'^(.{3,4})(.*)$', content), 0, None)
             if c:
                 if c[0] in codes.keys():
-                    return f"Code {c[0]} :: {codes[c[0]]}"
-        return None
+                    return f"Code {c[0]} :: {codes[c[0]]}", c[0]
+        return None, None
 
 
 def setup(bot):
