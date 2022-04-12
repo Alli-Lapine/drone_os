@@ -1,5 +1,5 @@
 import discord
-from typing import Any
+from typing import Any, Union
 import yaml
 
 guilds = []
@@ -29,15 +29,16 @@ def update_guilds(guildlist: list):
     guilds = guildlist
 
 
-def aget(lst: list, index: int, default: Any) -> Any:
+def aget(listlike: Union[list, tuple], index: int, default: Any) -> Any:
+    """Like .get on Dicts. Returns the item at `index` or `default` if it is out of range. Coded in anger."""
     try:
-        return lst[index]
+        return listlike[index]
     except IndexError:
         return default
 
 
 def load_codes():
-    '''Populates util.codes with the contents of codes.yml'''
+    """Populates util.codes with the contents of codes.yml"""
     with open('codes.yml', 'r') as f:
         global codes
         codes = yaml.safe_load(f)

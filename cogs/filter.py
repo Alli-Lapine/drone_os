@@ -1,48 +1,12 @@
 import re
-from typing import List, Optional
 
 import discord
 from discord.commands import SlashCommandGroup, permissions, Option, ApplicationContext
 from discord.ext import commands
 
-from util import guilds, mkembed, hivemap, aget, codes
+from util import guilds, mkembed, hivemap, aget
+from util.filter_utils import reply_builder, get_drone_webhook, format_code
 from util.storage import RegisteredDrone, Storage, DroneChannel
-
-
-async def get_drone_webhook(channel: discord.channel) -> Optional[discord.Webhook]:
-    hooks = await channel.webhooks()
-    if not hooks:
-        return None
-
-    for h in hooks:
-        if h.name == "Drone speech optimization":
-            return h
-
-    return None
-
-
-def _get_emojis(msg: discord.Message) -> List[dict]:
-    content = msg.content
-    res = re.finditer(r'<(?P<animated>a)?:(?P<name>\w+):(?P<snowflake>\d+)>', content)
-    if not res:
-        return []
-    emos = []
-    for r in res:
-        rd = r.groupdict()
-        ext = 'gif' if rd.get('animated') else 'png'
-        emo = {
-            'name': rd['name'],
-            'id': rd['snowflake'],
-            'url': f"https://cdn.discordapp.com/emojis/{rd['snowflake']}.{ext}",
-            'data': None,
-            'animated': rd.get('animated')
-        }
-        emos.append(emo)
-    return emos
-
-
-def _format_emoji(emo: dict) -> str:
-    return f"<{'a' if emo['animated'] else ''}:{emo['name']}:{emo['id']}> "
 
 
 class Filter(commands.Cog):
@@ -50,7 +14,7 @@ class Filter(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        bot.logger.info("filter v2.9.2 ready")
+        bot.logger.info("filter v2.9.3 ready")
 
     @filtergrp.command(name="enable_here", description="Allow automatic drone speech optimizations in this channel",
                        guild_ids=guilds, default_permission=False, permissions=[permissions.has_role('Director')])
@@ -179,15 +143,15 @@ class Filter(commands.Cog):
 
     async def drone_filter_handler(self, msg: discord.Message, hook: discord.Webhook):
         attempted_chat = aget(re.findall(r'^(\d{4}) :: (.*)', msg.content), 0, [])
-        attempted_did = aget(attempted_chat, 0, None)
+        attempted_droneid = aget(attempted_chat, 0, None)
         attempted_content = aget(attempted_chat, 1, None)
 
         try:
-            d = Storage.backend.get(RegisteredDrone, {'discordid': msg.author.id})
+            db_drone = Storage.backend.get(RegisteredDrone, {'discordid': msg.author.id})
         except RegisteredDrone.DoesNotExist:
-            d = None
+            db_drone = None
 
-        if attempted_did and not attempted_content:
+        if attempted_droneid and not attempted_content:
             # Malformed attempt, yeet it.
             self.bot.logger.info(f"Malformed delete: {msg}")
             await msg.delete()
@@ -195,64 +159,66 @@ class Filter(commands.Cog):
 
         # Is the channel locked to enforce mode?
         try:
-            c = Storage.backend.get(DroneChannel, {'discordid': msg.channel.id})
+            db_channel = Storage.backend.get(DroneChannel, {'discordid': msg.channel.id})
         except DroneChannel.DoesNotExist:
-            c = {}
-        cconf = c.get('config', {})
-        if cconf.get('enforcedrones'):  # All registered drones must use speech opt
-            if d:
-                if not attempted_did and not attempted_content:
+            db_channel = {}
+        chan_conf = db_channel.get('config', {})
+        if chan_conf.get('enforcedrones'):  # All registered drones must use speech opt
+            if db_drone:
+                if not attempted_droneid and not attempted_content:
                     self.bot.logger.info(f"Chan enforcedrone delete: {msg}")
                     await msg.delete()
                     return
                 else:
-                    await self.send_as_drone(d, hook, msg)
+                    await self.send_as_drone(db_drone, hook, msg)
                     await msg.delete()
                     return
 
-        if cconf.get('enforceall'):
-            if not attempted_did:  # Only drones may speak
+        if chan_conf.get('enforceall'):
+            if not attempted_droneid:  # Only drones may speak
                 self.bot.logger.info(f"Chan Enforceall delete: {msg}")
                 await msg.delete()
                 return
 
         # If a non-drone uses a prefix, just bail.
-        if not d:
+        if not db_drone:
             return
 
         # Is the drone locked to enforce mode?
-        dconf = d.get('config', {})
-        if dconf.get('enforce'):
-            if not attempted_did and not attempted_content:
+        drone_conf = db_drone.get('config', {})
+        if drone_conf.get('enforce'):
+            if not attempted_droneid and not attempted_content:
                 self.bot.logger.info(f"Drone enforce delete: {msg}")
                 await msg.delete()
                 return
             else:
-                await self.send_as_drone(d, hook, msg)
+                await self.send_as_drone(db_drone, hook, msg)
                 await msg.delete()
                 return
 
-        if not attempted_did:
+        if not attempted_droneid:
             return
 
         # Is the drone using their own prefix?
-        if attempted_did and d['droneid'] != attempted_did:
-            self.bot.logger.info(f"Wrong prefix delete: got {attempted_did}, should be {d['droneid']}")
+        if attempted_droneid and db_drone['droneid'] != attempted_droneid:
+            self.bot.logger.info(f"Wrong prefix delete: got {attempted_droneid}, should be {db_drone['droneid']}")
             await msg.delete()
             return
 
-        await self.send_as_drone(d, hook, msg)
+        await self.send_as_drone(db_drone, hook, msg)
         return
 
     async def send_as_drone(self, drone: RegisteredDrone, hook: discord.Webhook, msg: discord.Message):
         droneid = drone['droneid']
-        hivesym = hivemap.get(drone.get('hive'), '☼')
+        hivesym = hivemap.get(drone.get('hive'), '☼')  # This is the defailt hive symbol
         content = msg.content.replace(f"{droneid} :: ", '')
-        code = await self.format_code(content, drone)
+        code = format_code(content, drone)
 
         if aget(code, 0, None):
             content = content.replace(code[1], '')
         content = await self.handle_filter(content, drone, msg)
+
+        # This list can be thought of as the 'fields' in a drone message.
         content_list = [
             droneid,
             hivesym,
@@ -261,18 +227,7 @@ class Filter(commands.Cog):
         ]
         content_list = list(filter(None, content_list))  # Strip Nones so we construct the output correctly
 
-        if msg.reference:
-            mrr = msg.reference.resolved
-            reply_embed = discord.Embed(
-                color=discord.Color.green(),
-                description=f"[Reply to]({mrr.jump_url}): {mrr.content}"
-            ).set_author(
-                # Webhook bot messages are Users rather than Members and have no nick
-                name=mrr.author.nick if isinstance(msg.reference.resolved.author, discord.Member) else mrr.author.name,
-                icon_url=msg.reference.resolved.author.avatar.url
-            )
-        else:
-            reply_embed = None
+        reply_embed = await reply_builder(msg)  # Populate a reply embed if necessary
 
         out_content = ""
         for i, v in enumerate(content_list):
@@ -290,16 +245,8 @@ class Filter(commands.Cog):
 
     @staticmethod
     async def handle_filter(content: str, drone: RegisteredDrone, msg: discord.Message) -> str:
+        # TODO
         return content
-
-    @staticmethod
-    async def format_code(content: str, drone: RegisteredDrone) -> (Optional[str], Optional[str]):
-        if drone:
-            c = aget(re.findall(r'^(.{3,4})(.*)$', content), 0, None)
-            if c:
-                if c[0] in codes.keys():
-                    return f"Code {c[0]} :: {codes[c[0]]}", c[0]
-        return None, None
 
 
 def setup(bot):
