@@ -4,9 +4,14 @@ import yaml
 
 guilds = []
 hivemap = {
-    'lapine': '☼w'
+    'lapine/unaffiliated': '☼',
+    'mndlos': '⍔',
+    'xantronix': '⚹',
+    'heartthrob': '♥',
+    'hexcorp': '⬡'
 }
 codes = None
+
 
 def mkembed(kind: str, description: str, **kwargs) -> discord.Embed:
     """Creates a discordpy Embed with some sane defaults"""
@@ -32,6 +37,7 @@ def aget(lst: list, index: int, default: Any) -> Any:
 
 
 def load_codes():
-    with open('codes.yml','r') as f:
+    '''Populates util.codes with the contents of codes.yml'''
+    with open('codes.yml', 'r') as f:
         global codes
         codes = yaml.safe_load(f)
