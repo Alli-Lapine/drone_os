@@ -3,13 +3,7 @@ from typing import Any, Union
 import yaml
 
 guilds = []
-hivemap = {
-    'lapine/unaffiliated': '☼',
-    'mndlos': '⍔',
-    'xantronix': '⚹',
-    'heartthrob': '♥',
-    'hexcorp': '⬡'
-}
+hivemap = {}
 codes = None
 
 
@@ -42,3 +36,8 @@ def load_codes():
     with open('codes.yml', 'r') as f:
         global codes
         codes = yaml.safe_load(f)
+
+def load_hives():
+    with open('hives.yml', 'r') as f:
+        global hivemap
+        hivemap = yaml.safe_load(f)
