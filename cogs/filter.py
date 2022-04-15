@@ -8,13 +8,15 @@ from util import guilds, mkembed, hivemap, aget, filters
 from util.filter_utils import reply_builder, get_drone_webhook, format_code
 from util.storage import RegisteredDrone, Storage, DroneChannel
 
+from datetime import datetime
+
 
 class Filter(commands.Cog):
     filtergrp = SlashCommandGroup(name="dronespeech", description="Drone speech optimizations", guild_ids=guilds)
 
     def __init__(self, bot):
         self.bot = bot
-        bot.logger.info("filter v2.9.3 ready")
+        bot.logger.info("filter v2.10.1 ready")
 
     @filtergrp.command(name="enable_here", description="Allow automatic drone speech optimizations in this channel",
                        guild_ids=guilds, default_permission=False, permissions=[permissions.has_role('Director')])
@@ -130,6 +132,22 @@ class Filter(commands.Cog):
         c['config'] = {}
         Storage.backend.save(c)
         await ctx.respond(embed=mkembed('done', f'Speech optimizations unlocked in {chan.mention}'))
+
+    @commands.slash_command(name='wall', description='Send a DroneOS announcement', guild_ids=guilds)
+    @permissions.has_role('Production')
+    async def wall(self, ctx: ApplicationContext, message: Option(str, required=True)):
+        try:
+            db_drone = Storage.backend.get(RegisteredDrone, {'discordid': ctx.author.id})
+        except RegisteredDrone.DoesNotExist:
+            await ctx.respond('`Access denied`', ephemeral=True)
+            return
+        droneid = db_drone['droneid']
+        await ctx.respond(
+            f"""```
+Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')}):
+
+{message}```"""
+        )
 
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
