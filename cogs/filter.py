@@ -4,7 +4,7 @@ import discord
 from discord.commands import SlashCommandGroup, permissions, Option, ApplicationContext
 from discord.ext import commands
 
-from util import guilds, mkembed, hivemap, aget
+from util import guilds, mkembed, hivemap, aget, filters
 from util.filter_utils import reply_builder, get_drone_webhook, format_code
 from util.storage import RegisteredDrone, Storage, DroneChannel
 
@@ -245,8 +245,15 @@ class Filter(commands.Cog):
 
     @staticmethod
     async def handle_filter(content: str, drone: RegisteredDrone, msg: discord.Message) -> str:
-        # TODO
-        return content
+        filt: dict = filters.get(drone['hive'], filters['lapine/unaffiliated'])
+        cs = content.split(' ')
+        for i, v in enumerate(cs):
+            rex = aget(re.findall(r'([\w\']+)(\W?)', v), 0, [])
+            word = aget(rex, 0, None)
+            punc = aget(rex, 1, None)
+            if word.strip() in filt.keys():
+                cs[i] = filt[word] + punc if punc else filt[word]
+        return ' '.join(cs)
 
 
 def setup(bot):
