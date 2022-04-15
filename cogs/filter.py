@@ -235,7 +235,7 @@ class Filter(commands.Cog):
                 out_content += f"{v} :: " if i < len(content_list)-1 else f"{v}"
 
         await hook.send(
-            username=msg.author.nick,
+            username=msg.author.nick or msg.author.name,
             content=out_content,
             avatar_url=msg.author.avatar.url,
             embed=reply_embed

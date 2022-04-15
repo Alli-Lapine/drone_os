@@ -22,7 +22,7 @@ class Registration(commands.Cog):
                                                                         "Director Lapine's hive")
     async def register_drone(self, ctx: discord.ApplicationContext):
         await ctx.defer()
-        drone_id: Optional[List[str]] = re.findall(r'.*(\d{4}).*', ctx.author.nick)
+        drone_id: Optional[List[str]] = re.findall(r'.*(\d{4}).*', ctx.author.nick or ctx.author.name)
         if not drone_id:
             await ctx.respond(embed=mkembed('error', '`Your name must contain a 4 number drone ID. Change your '
                                                      'nickname and try again`'))
