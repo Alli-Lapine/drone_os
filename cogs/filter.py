@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from util import guilds, mkembed, hivemap, aget, filters
 from util.filter_utils import reply_builder, get_drone_webhook, format_code
-from util.storage import RegisteredDrone, Storage, DroneChannel
+from util.storage import RegisteredDrone, Storage, DroneChannel, get_drone, get_channel
 
 from datetime import datetime
 
@@ -16,7 +16,7 @@ class Filter(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        bot.logger.info("filter v2.10.1 ready")
+        bot.logger.info("filter v2.10.2 ready")
 
     @filtergrp.command(name="enable_here", description="Allow automatic drone speech optimizations in this channel",
                        guild_ids=guilds, default_permission=False, permissions=[permissions.has_role('Director')])
@@ -52,93 +52,86 @@ class Filter(commands.Cog):
     async def lock_drone(self, ctx: ApplicationContext, droneid: Option(str, "Drone ID", required=False)):
         if not droneid:
             await ctx.defer(ephemeral=True)
-            try:
-                d: RegisteredDrone = Storage.backend.get(RegisteredDrone, {'discordid': ctx.author.id})
-            except RegisteredDrone.DoesNotExist:
+            db_drone = get_drone({'discordid': ctx.author.id})
+            if not db_drone:
                 await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
                 return
         else:
             await ctx.defer()
-            try:
-                d: RegisteredDrone = Storage.backend.get(RegisteredDrone, {'droneid': droneid})
-            except RegisteredDrone.DoesNotExist:
+            db_drone = get_drone({'droneid': droneid})
+            if not db_drone:
                 await ctx.respond(embed=mkembed('error', f'`{droneid} does not appear to be a registered drone.`'))
                 return
 
-        if d.get('config'):
-            d['config']['enforce'] = True
+        if db_drone.get('config'):
+            db_drone['config']['enforce'] = True
         else:
-            d['config'] = {}
-            d['config']['enforce'] = True
-        Storage.backend.save(d)
-        await ctx.respond(embed=mkembed('done', f'`Drone {d["droneid"]} speech optimizations have been locked.`'))
+            db_drone['config'] = {}
+            db_drone['config']['enforce'] = True
+        Storage.backend.save(db_drone)
+        await ctx.respond(embed=mkembed('done', f'`Drone {db_drone["droneid"]} speech optimizations have been locked.`'))
         return
 
     @filtergrp.command(name='unlock_drone', description="Unlock the specified drone's speech optimizations, or yourself if no ID given", guild_ids=guilds)
     async def unlock_drone(self, ctx: ApplicationContext, droneid: Option(str, "Drone ID", required=False)):
         if not droneid:
             await ctx.defer(ephemeral=True)
-            try:
-                d: RegisteredDrone = Storage.backend.get(RegisteredDrone, {'discordid': ctx.author.id})
-            except RegisteredDrone.DoesNotExist:
-                await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered dro ne.`'))
+            db_drone = get_drone({'discordid': ctx.author.id})
+            if not db_drone:
+                await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
                 return
         else:
             await ctx.defer()
-            try:
-                d: RegisteredDrone = Storage.backend.get(RegisteredDrone, {'droneid': droneid})
-            except RegisteredDrone.DoesNotExist:
+            db_drone = get_drone({'droneid': droneid})
+            if not db_drone:
                 await ctx.respond(embed=mkembed('error', f'`{droneid} does not appear to be a registered drone.`'))
                 return
 
-        if d.get('config'):
-            d['config']['enforce'] = False
+        if db_drone.get('config'):
+            db_drone['config']['enforce'] = False
         else:
-            d['config'] = {}
-            d['config']['enforce'] = False
-        Storage.backend.save(d)
-        await ctx.respond(embed=mkembed('done', f'`Drone {d["droneid"]} speech optimizations have been unlocked.`'))
+            db_drone['config'] = {}
+            db_drone['config']['enforce'] = False
+        Storage.backend.save(db_drone)
+        await ctx.respond(embed=mkembed('done', f'`Drone {db_drone["droneid"]} speech optimizations have been unlocked.`'))
         return
 
-    @filtergrp.command(name='lock_channel', description="Lock drone speech optimizations in the given channel, or this channel if no ID given", guild_ids=guilds)
+    @filtergrp.command(name='lock_channel', description="Lock drone speech optimizations in the given channel, or this channel if none given", guild_ids=guilds)
     async def lock_channel(self, ctx: ApplicationContext,
                            lockall: Option(bool, description='Allow ONLY drones to speak', default=False),
                            channel: Option(discord.TextChannel, required=False)):
         await ctx.defer()
         chan = channel or ctx.channel
-        try:
-            c: DroneChannel = Storage.backend.get(DroneChannel, {'discordid': chan.id})
-        except DroneChannel.DoesNotExist:
+        db_chan = get_channel({'discordid': chan.id})
+        if not db_chan:
             if not await get_drone_webhook(chan):
                 await ctx.respond(embed=mkembed('error', f'Speech optimizations not active in {chan.mention}'))
                 return
             else:
-                c = DroneChannel({'discordid': chan.id})
+                db_chan = DroneChannel({'discordid': chan.id})
         lockmode = 'enforceall' if lockall else 'enforcedrones'
-        c['config'] = {lockmode: True}
-        Storage.backend.save(c)
+        db_chan['config'] = {lockmode: True}
+        Storage.backend.save(db_chan)
         await ctx.respond(embed=mkembed('done', f'Speech optimizations locked for {"EVERYONE" if lockall else "drones"} in {chan.mention}'))
 
-    @filtergrp.command(name='unlock_channel', description="Unlock drone speech optimizations in the given channel, or this channel if no ID given", guild_ids=guilds)
+    @filtergrp.command(name='unlock_channel', description="Unlock drone speech optimizations in the given channel, or this channel if none given", guild_ids=guilds)
     async def lock_channel(self, ctx: ApplicationContext,
                            channel: Option(discord.TextChannel, required=False)):
         await ctx.defer()
         chan = channel or ctx.channel
-        try:
-            c: DroneChannel = Storage.backend.get(DroneChannel, {'discordid': chan.id})
-        except DroneChannel.DoesNotExist:
+        db_chan = get_channel({'discordid': chan.id})
+        if not db_chan:
             await ctx.respond(embed=mkembed('error', f'Speech optimizations not locked in {chan.mention}'))
             return
-        c['config'] = {}
-        Storage.backend.save(c)
+        db_chan['config'] = {}
+        Storage.backend.save(db_chan)
         await ctx.respond(embed=mkembed('done', f'Speech optimizations unlocked in {chan.mention}'))
 
     @commands.slash_command(name='wall', description='Send a DroneOS announcement', guild_ids=guilds)
     @permissions.has_role('Production')
     async def wall(self, ctx: ApplicationContext, message: Option(str, required=True)):
-        try:
-            db_drone = Storage.backend.get(RegisteredDrone, {'discordid': ctx.author.id})
-        except RegisteredDrone.DoesNotExist:
+        db_drone = get_drone({'discordid': ctx.author.id})
+        if not db_drone:
             await ctx.respond('`Access denied`', ephemeral=True)
             return
         droneid = db_drone['droneid']
@@ -164,10 +157,7 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
         attempted_droneid = aget(attempted_chat, 0, None)
         attempted_content = aget(attempted_chat, 1, None)
 
-        try:
-            db_drone = Storage.backend.get(RegisteredDrone, {'discordid': msg.author.id})
-        except RegisteredDrone.DoesNotExist:
-            db_drone = None
+        db_drone = get_drone({'discordid': msg.author.id})
 
         if attempted_droneid and not attempted_content:
             # Malformed attempt, yeet it.
@@ -176,10 +166,7 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
             return
 
         # Is the channel locked to enforce mode?
-        try:
-            db_channel = Storage.backend.get(DroneChannel, {'discordid': msg.channel.id})
-        except DroneChannel.DoesNotExist:
-            db_channel = {}
+        db_channel = get_channel({'discordid': msg.channel.id}) or {}  # Use an empty dict for easier .get
         chan_conf = db_channel.get('config', {})
         if chan_conf.get('enforcedrones'):  # All registered drones must use speech opt
             if db_drone:
@@ -228,7 +215,7 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
 
     async def send_as_drone(self, drone: RegisteredDrone, hook: discord.Webhook, msg: discord.Message):
         droneid = drone['droneid']
-        hivesym = hivemap.get(drone.get('hive'), '☼')  # This is the defailt hive symbol
+        hivesym = hivemap.get(drone.get('hive'), '☼')  # This is the defailt hive symbol, we can remove this latter.
         content = msg.content.replace(f"{droneid} :: ", '')
         code = format_code(content, drone)
 

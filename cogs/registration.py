@@ -7,14 +7,14 @@ from discord.ext import commands
 
 import util
 from util import guilds, mkembed
-from util.storage import RegisteredDrone, Storage
+from util.storage import RegisteredDrone, Storage, get_drone
 
 
 class Registration(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        bot.logger.info("registration v1.2 ready")
+        bot.logger.info("registration v1.2.1 ready")
 
     registration = SlashCommandGroup("registration", "Manage connection to the hive", guild_ids=guilds)
 
@@ -26,13 +26,12 @@ class Registration(commands.Cog):
             await ctx.respond(embed=mkembed('error', '`Your name must contain a 4 number drone ID. Change your '
                                                      'nickname and try again`'))
             return
-        try:
-            drone_id: str = drone_id[0]
-            drone = Storage.backend.get(RegisteredDrone, {'droneid': drone_id})
-            if drone:
-                await ctx.respond(embed=mkembed('error', f"`Drone ID {drone_id} is already registered`"))
-                return
-        except RegisteredDrone.DoesNotExist:
+        drone_id: str = drone_id[0]
+        drone = get_drone({'droneid': drone_id})
+        if drone:
+            await ctx.respond(embed=mkembed('error', f"`Drone ID {drone_id} is already registered`"))
+            return
+        else:
             drone = RegisteredDrone({'droneid': drone_id, 'discordid': ctx.author.id, 'config': {}})
             actual_hive = hive.split(', ')[0]
             drone['hive'] = actual_hive
@@ -52,10 +51,9 @@ class Registration(commands.Cog):
     @permissions.has_role("Drone")
     async def disconnect_drone(self, ctx: discord.ApplicationContext):
         await ctx.defer()
-        try:
-            drone = Storage.backend.get(RegisteredDrone, {'discordid': ctx.author.id})
-            drone_id = drone['droneid']
-        except RegisteredDrone.DoesNotExist:
+        drone = get_drone({'discordid': ctx.author.id})
+        drone_id = drone['droneid']
+        if not drone:
             await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
             return
         Storage.backend.delete(drone)
@@ -71,9 +69,8 @@ class Registration(commands.Cog):
     @registration.command(name='sethive', description='Set which hive you are a member of')
     async def sethive(self, ctx: discord.ApplicationContext, hive: Option(str, choices=util.fhivemap)):
         await ctx.defer()
-        try:
-            drone = Storage.backend.get(RegisteredDrone, {'discordid': ctx.author.id})
-        except RegisteredDrone.DoesNotExist:
+        drone = get_drone({'discordid': ctx.author.id})
+        if not drone:
             await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
             return
         actual_hive = hive.split(', ')[0]
