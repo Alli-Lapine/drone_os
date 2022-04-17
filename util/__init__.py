@@ -4,6 +4,7 @@ import yaml
 
 guilds = []
 hivemap = {}
+fhivemap = []
 filters = {}
 codes = None
 
@@ -42,7 +43,9 @@ def load_codes():
 def load_hives():
     with open('hives.yml', 'r') as f:
         global hivemap
+        global fhivemap
         hivemap = yaml.safe_load(f)
+        fhivemap = [f"{x}, {hivemap[x]}" for x in hivemap.keys()]
 
 
 def load_filters():

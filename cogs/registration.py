@@ -2,7 +2,7 @@ import re
 from typing import List, Optional
 
 import discord
-from discord.commands import SlashCommandGroup, permissions, Option, AutocompleteContext
+from discord.commands import SlashCommandGroup, permissions, Option
 from discord.ext import commands
 
 import util
@@ -14,7 +14,7 @@ class Registration(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        bot.logger.info("registration v1.1 ready")
+        bot.logger.info("registration v1.2 ready")
 
     registration = SlashCommandGroup("registration", "Manage connection to the hive", guild_ids=guilds)
 
@@ -68,18 +68,17 @@ class Registration(commands.Cog):
                                           color=discord.Color.red()))
 
     @registration.command(name='sethive', description='Set which hive you are a member of')
-    async def sethive(self, ctx: discord.ApplicationContext, hive: Option(str, choices=util.hivemap.keys())):
+    async def sethive(self, ctx: discord.ApplicationContext, hive: Option(str, choices=util.fhivemap)):
         await ctx.defer()
         try:
             drone = Storage.backend.get(RegisteredDrone, {'discordid': ctx.author.id})
-            drone_id = drone['droneid']
         except RegisteredDrone.DoesNotExist:
             await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
             return
-        drone['hive'] = hive
+        actual_hive = hive.split(', ')[0]
+        drone['hive'] = actual_hive
         Storage.backend.save(drone)
-        await ctx.respond(embed=mkembed('done', f"Your hive set to {hive} ({util.hivemap[hive]})"))
-
+        await ctx.respond(embed=mkembed('done', f"Your hive set to {actual_hive} ({util.hivemap[actual_hive]})"))
 
 
 def setup(bot):
