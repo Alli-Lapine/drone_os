@@ -269,7 +269,7 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
             rex = aget(re.findall(r'([\w\']+)(\W?)', v), 0, [])
             word = aget(rex, 0, None)
             punc = aget(rex, 1, None)
-            if word.strip() in filt.keys():
+            if word and word.strip() in filt.keys():
                 cs[i] = filt[word] + punc if punc else filt[word]
         return ' '.join(cs)
 
