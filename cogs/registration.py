@@ -18,9 +18,8 @@ class Registration(commands.Cog):
 
     registration = SlashCommandGroup("registration", "Manage connection to the hive", guild_ids=guilds)
 
-    @registration.command(name="connect", guild_ids=guilds, description="Register yourself as a drone in "
-                                                                        "Director Lapine's hive")
-    async def register_drone(self, ctx: discord.ApplicationContext):
+    @registration.command(name="connect", guild_ids=guilds, description="Register yourself as a drone")
+    async def register_drone(self, ctx: discord.ApplicationContext, hive: Option(str, choices=util.fhivemap, required=True)):
         await ctx.defer()
         drone_id: Optional[List[str]] = re.findall(r'.*(\d{4}).*', ctx.author.nick or ctx.author.name)
         if not drone_id:
@@ -35,6 +34,8 @@ class Registration(commands.Cog):
                 return
         except RegisteredDrone.DoesNotExist:
             drone = RegisteredDrone({'droneid': drone_id, 'discordid': ctx.author.id, 'config': {}})
+            actual_hive = hive.split(', ')[0]
+            drone['hive'] = actual_hive
             Storage.backend.save(drone)
             await ctx.respond(f"```\nDrone ID {drone_id} successfully registered```")
             director = self.bot.get_user(212005474764062732)
