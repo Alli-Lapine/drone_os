@@ -16,7 +16,7 @@ class Filter(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        bot.logger.info("filter v2.10.2 ready")
+        bot.logger.info("filter v2.11 ready")
 
     @filtergrp.command(name="enable_here", description="Allow automatic drone speech optimizations in this channel",
                        guild_ids=guilds, default_permission=False, permissions=[permissions.has_role('Director')])
@@ -153,7 +153,7 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
             await self.drone_filter_handler(msg, h)
 
     async def drone_filter_handler(self, msg: discord.Message, hook: discord.Webhook):
-        attempted_chat = aget(re.findall(r'^(\d{4}) :: (.*)', msg.content), 0, [])
+        attempted_chat = aget(re.findall(r'^([A-z0-9]{4}) :: (.*)', msg.content), 0, [])
         attempted_droneid = aget(attempted_chat, 0, None)
         attempted_content = aget(attempted_chat, 1, None)
 
