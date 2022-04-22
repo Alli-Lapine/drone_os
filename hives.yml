@@ -1,5 +1,15 @@
-'lapine/unaffiliated': '☼'
-'mndlos': '⍔'
-'xantronix': '⚹'
-'heartthrob': '\♥'
-'hexcorp': '⬡'
+'lapine/unaffiliated':
+  sym: '☼'
+  owner: 212005474764062732
+'mndlos':
+  sym: '⍔'
+  owner: 110946836772052992
+'xantronix':
+  sym: '⚹'
+  owner: 473599816308621334
+'heartthrob':
+  sym: '\♥'
+  owner: 199952867459596288
+'hexcorp':
+  sym: '⬡'
+  owner: 194126224828661760

@@ -45,7 +45,7 @@ def load_hives():
         global hivemap
         global fhivemap
         hivemap = yaml.safe_load(f)
-        fhivemap = [f"{x}, {hivemap[x]}" for x in hivemap.keys()]
+        fhivemap = [f"{x}, {hivemap[x]['sym']}" for x in hivemap.keys()]
 
 
 def load_filters():

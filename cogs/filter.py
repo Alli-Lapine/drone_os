@@ -224,7 +224,7 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
 
     async def send_as_drone(self, drone: RegisteredDrone, hook: discord.Webhook, msg: discord.Message):
         droneid = drone['droneid']
-        hivesym = hivemap.get(drone.get('hive'), '☼')  # This is the defailt hive symbol, we can remove this latter.
+        hivesym = hivemap[drone['hive']]['sym']
         content = msg.content.replace(f"{droneid} :: ", '')
         code = format_code(content, drone)
 

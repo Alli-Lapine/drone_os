@@ -75,7 +75,7 @@ class Registration(commands.Cog):
         actual_hive = hive.split(', ')[0]
         drone['hive'] = actual_hive
         Storage.backend.save(drone)
-        await ctx.respond(embed=mkembed('done', f"Your hive set to {actual_hive} ({util.hivemap[actual_hive]})"))
+        await ctx.respond(embed=mkembed('done', f"Your hive set to {actual_hive} ({util.hivemap[actual_hive]['sym']})"))
 
     @registration.command(name='setid', description='Change your drone ID')
     async def sethive(self, ctx: discord.ApplicationContext,
