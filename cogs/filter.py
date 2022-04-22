@@ -2,7 +2,7 @@ import re
 
 import discord
 from discord.commands import SlashCommandGroup, permissions, Option, ApplicationContext
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 from util import guilds, mkembed, hivemap, aget, filters
 from util.filter_utils import reply_builder, get_drone_webhook, format_code
@@ -16,7 +16,7 @@ class Filter(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        bot.logger.info("filter v2.11 ready")
+        bot.logger.info("filter v2.12 ready")
 
     @filtergrp.command(name="enable_here", description="Allow automatic drone speech optimizations in this channel",
                        guild_ids=guilds, default_permission=False, permissions=[permissions.has_role('Director')])
@@ -49,7 +49,9 @@ class Filter(commands.Cog):
             return
 
     @filtergrp.command(name='lock_drone', description="Lock the specified drone into speech optimizations, or yourself if no ID given", guild_ids=guilds)
-    async def lock_drone(self, ctx: ApplicationContext, droneid: Option(str, "Drone ID", required=False)):
+    async def lock_drone(self, ctx: ApplicationContext,
+                         droneid: Option(str, "Drone ID", required=False),
+                         duration: Option(float, "Duration", required=False)):
         if not droneid:
             await ctx.defer(ephemeral=True)
             db_drone = get_drone({'discordid': ctx.author.id})
@@ -63,13 +65,19 @@ class Filter(commands.Cog):
                 await ctx.respond(embed=mkembed('error', f'`{droneid} does not appear to be a registered drone.`'))
                 return
 
+        if duration:
+            locktime = datetime.now().timestamp() + duration
+        else:
+            locktime = None
+
         if db_drone.get('config'):
-            db_drone['config']['enforce'] = True
+            db_drone['config']['enforce'] = locktime or True
         else:
             db_drone['config'] = {}
-            db_drone['config']['enforce'] = True
+            db_drone['config']['enforce'] = locktime or True
         Storage.backend.save(db_drone)
-        await ctx.respond(embed=mkembed('done', f'`Drone {db_drone["droneid"]} speech optimizations have been locked.`'))
+        msgtime = f" for {duration} seconds" if duration else ''
+        await ctx.respond(embed=mkembed('done', f'`Drone {db_drone["droneid"]} speech optimizations have been locked{msgtime}.`'))
         return
 
     @filtergrp.command(name='unlock_drone', description="Unlock the specified drone's speech optimizations, or yourself if no ID given", guild_ids=guilds)
@@ -127,6 +135,7 @@ class Filter(commands.Cog):
         Storage.backend.save(db_chan)
         await ctx.respond(embed=mkembed('done', f'Speech optimizations unlocked in {chan.mention}'))
 
+    # TODO: Move to new cog
     @commands.slash_command(name='wall', description='Send a DroneOS announcement', guild_ids=guilds)
     @permissions.has_role('Production')
     async def wall(self, ctx: ApplicationContext, message: Option(str, required=True)):
@@ -259,6 +268,26 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
             if word and word.strip() in filt.keys():
                 cs[i] = filt[word] + punc if punc else filt[word]
         return ' '.join(cs)
+
+    @tasks.loop(seconds=5)
+    async def check_locks(self):
+        now = datetime.now().timestamp()
+        db_drones = Storage.backend.filter(RegisteredDrone, {'config.enforce': {'$gt': now}}) or []
+        for d in db_drones:
+            self.bot.logger.info(f'Cleared timer.. {d.droneid}')
+            d['config']['enforce'] = False
+            Storage.backend.save(d)
+            continue
+
+        db_chans = Storage.backend.filter(DroneChannel, {'$or': [
+            {'config.enforcedrones': {'$gt': now}},
+            {'config.enforceall': {'$gt': now}}
+        ]}) or []
+        for c in db_chans:
+            c.config.enforcedrones = False
+            c.config.enforceall = False
+            Storage.backend.save(c)
+            continue
 
 
 def setup(bot):
