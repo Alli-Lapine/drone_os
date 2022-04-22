@@ -54,13 +54,13 @@ class Filter(commands.Cog):
                          duration: Option(float, "Duration", required=False)):
         if not droneid:
             await ctx.defer(ephemeral=True)
-            db_drone = get_drone({'discordid': ctx.author.id})
+            db_drone = get_drone(ctx.author.id)
             if not db_drone:
                 await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
                 return
         else:
             await ctx.defer()
-            db_drone = get_drone({'droneid': droneid})
+            db_drone = get_drone(droneid)
             if not db_drone:
                 await ctx.respond(embed=mkembed('error', f'`{droneid} does not appear to be a registered drone.`'))
                 return
@@ -84,13 +84,13 @@ class Filter(commands.Cog):
     async def unlock_drone(self, ctx: ApplicationContext, droneid: Option(str, "Drone ID", required=False)):
         if not droneid:
             await ctx.defer(ephemeral=True)
-            db_drone = get_drone({'discordid': ctx.author.id})
+            db_drone = get_drone(ctx.author.id)
             if not db_drone:
                 await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
                 return
         else:
             await ctx.defer()
-            db_drone = get_drone({'droneid': droneid})
+            db_drone = get_drone(droneid)
             if not db_drone:
                 await ctx.respond(embed=mkembed('error', f'`{droneid} does not appear to be a registered drone.`'))
                 return
@@ -139,7 +139,7 @@ class Filter(commands.Cog):
     @commands.slash_command(name='wall', description='Send a DroneOS announcement', guild_ids=guilds)
     @permissions.has_role('Production')
     async def wall(self, ctx: ApplicationContext, message: Option(str, required=True)):
-        db_drone = get_drone({'discordid': ctx.author.id})
+        db_drone = get_drone(ctx.author.id)
         if not db_drone:
             await ctx.respond('`Access denied`', ephemeral=True)
             return
@@ -166,7 +166,7 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
         attempted_droneid = aget(attempted_chat, 0, None)
         attempted_content = aget(attempted_chat, 1, None)
 
-        db_drone = get_drone({'discordid': msg.author.id})
+        db_drone = get_drone(msg.author.id)
 
         if attempted_droneid and not attempted_content:
             # Malformed attempt, yeet it.

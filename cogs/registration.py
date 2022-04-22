@@ -26,7 +26,7 @@ class Registration(commands.Cog):
         if len(drone_id) != 4:
             await ctx.respond(embed=mkembed('error', f"`Drone IDs must be exactly 4 characters long`"))
             return
-        drone = get_drone({'droneid': drone_id})
+        drone = get_drone(drone_id)
         if drone:
             await ctx.respond(embed=mkembed('error', f"`Drone ID {drone_id} is already registered`"))
             return
@@ -50,7 +50,7 @@ class Registration(commands.Cog):
     @permissions.has_role("Drone")
     async def disconnect_drone(self, ctx: discord.ApplicationContext):
         await ctx.defer()
-        drone = get_drone({'discordid': ctx.author.id})
+        drone = get_drone(ctx.author.id)
         drone_id = drone['droneid']
         if not drone:
             await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
@@ -68,7 +68,7 @@ class Registration(commands.Cog):
     @registration.command(name='sethive', description='Set which hive you are a member of')
     async def sethive(self, ctx: discord.ApplicationContext, hive: Option(str, choices=util.fhivemap)):
         await ctx.defer()
-        drone = get_drone({'discordid': ctx.author.id})
+        drone = get_drone(ctx.author.id)
         if not drone:
             await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
             return
@@ -81,7 +81,7 @@ class Registration(commands.Cog):
     async def sethive(self, ctx: discord.ApplicationContext,
                       drone_id: Option(str, description='4 character drone ID', required=True)):
         await ctx.defer()
-        drone = get_drone({'discordid': ctx.author.id})
+        drone = get_drone(ctx.author.id)
         if not drone:
             await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
             return

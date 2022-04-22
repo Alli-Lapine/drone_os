@@ -19,13 +19,21 @@ class _StorageBackend:
 Storage = _StorageBackend()
 
 
-def get_drone(query: dict) -> Optional[RegisteredDrone]:
-    try:
-        db_drone = Storage.backend.get(RegisteredDrone, query)
-    except RegisteredDrone.DoesNotExist:
-        return None
-    else:
+def get_drone(query: int) -> Optional[RegisteredDrone]:
+    if len(str(query)) == 4:
+        try:
+            db_drone = Storage.backend.get(RegisteredDrone, {'droneid': str(query)})
+        except RegisteredDrone.DoesNotExist:
+            return None
         return db_drone
+    elif len(str(query)) >= 10:
+        try:
+            db_drone = Storage.backend.get(RegisteredDrone, {'discordid': query})
+        except RegisteredDrone.DoesNotExist:
+            return None
+        return db_drone
+    else:
+        raise RuntimeError("Invalid drone ID")
 
 
 def get_channel(query: dict) -> Optional[DroneChannel]:
