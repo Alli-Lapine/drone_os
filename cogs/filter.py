@@ -7,7 +7,7 @@ from discord.ext import commands, tasks
 from util import guilds, mkembed, hivemap, aget, filters
 from util.filter_utils import reply_builder, get_drone_webhook, format_code
 from util.storage import RegisteredDrone, Storage, DroneChannel, get_drone, get_channel
-
+from util.access_utils import has_access
 from datetime import datetime
 
 
@@ -64,6 +64,10 @@ class Filter(commands.Cog):
             if not db_drone:
                 await ctx.respond(embed=mkembed('error', f'`{droneid} does not appear to be a registered drone.`'))
                 return
+            operator = get_drone(ctx.author.id)
+            if not has_access(operator, db_drone):
+                await ctx.respond(embed=mkembed('error', '`Permission denied.`'))
+                return
 
         if duration:
             locktime = datetime.now().timestamp() + duration
@@ -93,6 +97,10 @@ class Filter(commands.Cog):
             db_drone = get_drone(droneid)
             if not db_drone:
                 await ctx.respond(embed=mkembed('error', f'`{droneid} does not appear to be a registered drone.`'))
+                return
+            operator = get_drone(ctx.author.id)
+            if not has_access(operator, db_drone):
+                await ctx.respond(embed=mkembed('error', '`Permission denied.`'))
                 return
 
         if db_drone.get('config'):
