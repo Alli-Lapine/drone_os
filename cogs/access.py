@@ -2,7 +2,7 @@ from discord.commands import SlashCommandGroup, ApplicationContext, Option
 from discord.ext import commands
 
 from util import guilds, mkembed
-from util.access_utils import grant_access, revoke_access, has_access, get_drone_hive_owner, accesslist_to_dronelist
+from util.access_utils import grant_access, revoke_access, has_access, accesslist_to_dronelist, get_drone_hive_owner
 from util.storage import get_drone
 
 

@@ -6,5 +6,6 @@ system:
     - cogs.registration
     - cogs.filter
     - cogs.access
+    - cogs.locks
   guilds:
     - 951905424922275891

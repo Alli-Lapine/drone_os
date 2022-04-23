@@ -2,12 +2,11 @@ import re
 
 import discord
 from discord.commands import SlashCommandGroup, permissions, Option, ApplicationContext
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 from util import guilds, mkembed, hivemap, aget, filters
 from util.filter_utils import reply_builder, get_drone_webhook, format_code
-from util.storage import RegisteredDrone, Storage, DroneChannel, get_drone, get_channel
-from util.access_utils import has_access
+from util.storage import RegisteredDrone, get_drone, get_channel
 from datetime import datetime
 
 
@@ -16,7 +15,7 @@ class Filter(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        bot.logger.info("filter v2.12 ready")
+        bot.logger.info("filter v2.13 ready")
 
     @filtergrp.command(name="enable_here", description="Allow automatic drone speech optimizations in this channel",
                        guild_ids=guilds, default_permission=False, permissions=[permissions.has_role('Director')])
@@ -47,101 +46,6 @@ class Filter(commands.Cog):
             await ctx.respond(
                 embed=mkembed('error', f"```Drone speech optimizations not active in {ctx.channel.name}```"))
             return
-
-    @filtergrp.command(name='lock_drone', description="Lock the specified drone into speech optimizations, or yourself if no ID given", guild_ids=guilds)
-    async def lock_drone(self, ctx: ApplicationContext,
-                         droneid: Option(str, "Drone ID", required=False),
-                         duration: Option(float, "Duration", required=False)):
-        if not droneid:
-            await ctx.defer(ephemeral=True)
-            db_drone = get_drone(ctx.author.id)
-            if not db_drone:
-                await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
-                return
-        else:
-            await ctx.defer()
-            db_drone = get_drone(droneid)
-            if not db_drone:
-                await ctx.respond(embed=mkembed('error', f'`{droneid} does not appear to be a registered drone.`'))
-                return
-            operator = get_drone(ctx.author.id)
-            if not has_access(operator, db_drone):
-                await ctx.respond(embed=mkembed('error', '`Permission denied.`'))
-                return
-
-        if duration:
-            locktime = datetime.now().timestamp() + duration
-        else:
-            locktime = None
-
-        if db_drone.get('config'):
-            db_drone['config']['enforce'] = locktime or True
-        else:
-            db_drone['config'] = {}
-            db_drone['config']['enforce'] = locktime or True
-        Storage.backend.save(db_drone)
-        msgtime = f" for {duration} seconds" if duration else ''
-        await ctx.respond(embed=mkembed('done', f'`Drone {db_drone["droneid"]} speech optimizations have been locked{msgtime}.`'))
-        return
-
-    @filtergrp.command(name='unlock_drone', description="Unlock the specified drone's speech optimizations, or yourself if no ID given", guild_ids=guilds)
-    async def unlock_drone(self, ctx: ApplicationContext, droneid: Option(str, "Drone ID", required=False)):
-        if not droneid:
-            await ctx.defer(ephemeral=True)
-            db_drone = get_drone(ctx.author.id)
-            if not db_drone:
-                await ctx.respond(embed=mkembed('error', '`You do not appear to be a registered drone.`'))
-                return
-        else:
-            await ctx.defer()
-            db_drone = get_drone(droneid)
-            if not db_drone:
-                await ctx.respond(embed=mkembed('error', f'`{droneid} does not appear to be a registered drone.`'))
-                return
-            operator = get_drone(ctx.author.id)
-            if not has_access(operator, db_drone):
-                await ctx.respond(embed=mkembed('error', '`Permission denied.`'))
-                return
-
-        if db_drone.get('config'):
-            db_drone['config']['enforce'] = False
-        else:
-            db_drone['config'] = {}
-            db_drone['config']['enforce'] = False
-        Storage.backend.save(db_drone)
-        await ctx.respond(embed=mkembed('done', f'`Drone {db_drone["droneid"]} speech optimizations have been unlocked.`'))
-        return
-
-    @filtergrp.command(name='lock_channel', description="Lock drone speech optimizations in the given channel, or this channel if none given", guild_ids=guilds)
-    async def lock_channel(self, ctx: ApplicationContext,
-                           lockall: Option(bool, description='Allow ONLY drones to speak', default=False),
-                           channel: Option(discord.TextChannel, required=False)):
-        await ctx.defer()
-        chan = channel or ctx.channel
-        db_chan = get_channel({'discordid': chan.id})
-        if not db_chan:
-            if not await get_drone_webhook(chan):
-                await ctx.respond(embed=mkembed('error', f'Speech optimizations not active in {chan.mention}'))
-                return
-            else:
-                db_chan = DroneChannel({'discordid': chan.id})
-        lockmode = 'enforceall' if lockall else 'enforcedrones'
-        db_chan['config'] = {lockmode: True}
-        Storage.backend.save(db_chan)
-        await ctx.respond(embed=mkembed('done', f'Speech optimizations locked for {"EVERYONE" if lockall else "drones"} in {chan.mention}'))
-
-    @filtergrp.command(name='unlock_channel', description="Unlock drone speech optimizations in the given channel, or this channel if none given", guild_ids=guilds)
-    async def lock_channel(self, ctx: ApplicationContext,
-                           channel: Option(discord.TextChannel, required=False)):
-        await ctx.defer()
-        chan = channel or ctx.channel
-        db_chan = get_channel({'discordid': chan.id})
-        if not db_chan:
-            await ctx.respond(embed=mkembed('error', f'Speech optimizations not locked in {chan.mention}'))
-            return
-        db_chan['config'] = {}
-        Storage.backend.save(db_chan)
-        await ctx.respond(embed=mkembed('done', f'Speech optimizations unlocked in {chan.mention}'))
 
     # TODO: Move to new cog
     @commands.slash_command(name='wall', description='Send a DroneOS announcement', guild_ids=guilds)
@@ -277,25 +181,7 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
                 cs[i] = filt[word] + punc if punc else filt[word]
         return ' '.join(cs)
 
-    @tasks.loop(seconds=5)
-    async def check_locks(self):
-        now = datetime.now().timestamp()
-        db_drones = Storage.backend.filter(RegisteredDrone, {'config.enforce': {'$gt': now}}) or []
-        for d in db_drones:
-            self.bot.logger.info(f'Cleared timer.. {d.droneid}')
-            d['config']['enforce'] = False
-            Storage.backend.save(d)
-            continue
 
-        db_chans = Storage.backend.filter(DroneChannel, {'$or': [
-            {'config.enforcedrones': {'$gt': now}},
-            {'config.enforceall': {'$gt': now}}
-        ]}) or []
-        for c in db_chans:
-            c.config.enforcedrones = False
-            c.config.enforceall = False
-            Storage.backend.save(c)
-            continue
 
 
 def setup(bot):

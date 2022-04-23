@@ -1,6 +1,8 @@
 from typing import Optional
 
-from util import hivemap
+import discord
+
+from util import mkembed, hivemap
 from util.storage import RegisteredDrone, Storage, get_drone
 
 
@@ -19,12 +21,6 @@ def has_access(source: RegisteredDrone, target: RegisteredDrone) -> bool:
         return True
     else:
         return False
-
-
-def get_drone_hive_owner(drone: RegisteredDrone) -> Optional[RegisteredDrone]:
-    owner_id = hivemap[drone['hive']]['owner']
-    drone_owner = get_drone(owner_id)
-    return drone_owner
 
 
 def grant_access(from_drone: RegisteredDrone, to_drone: RegisteredDrone) -> bool:
@@ -55,3 +51,22 @@ def accesslist_to_dronelist(accesslst: [int]) -> [RegisteredDrone]:
             r.append(db_drone)
     return r
 
+
+async def get_command_drones(operator: int, target: int, chkaccess: bool = True,
+                             ) -> (RegisteredDrone, RegisteredDrone, discord.Embed):
+    operator_drone = get_drone(operator)
+    if not operator_drone:
+        return None, None, mkembed('error', '`You do not appear to be a registered drone.`')
+    target_drone = get_drone(target)
+    if not target_drone:
+        return operator_drone, None, mkembed('error', f'`{target} does not appear to be a registered drone.`')
+    if chkaccess:
+        if not has_access(operator_drone, target_drone):
+            return operator_drone, target_drone, mkembed('error', '`Permission denied.`')
+    return operator_drone, target_drone, None
+
+
+def get_drone_hive_owner(drone: RegisteredDrone) -> Optional[RegisteredDrone]:
+    owner_id = hivemap[drone['hive']]['owner']
+    drone_owner = get_drone(owner_id)
+    return drone_owner
