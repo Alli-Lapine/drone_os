@@ -47,22 +47,6 @@ class Filter(commands.Cog):
                 embed=mkembed('error', f"```Drone speech optimizations not active in {ctx.channel.name}```"))
             return
 
-    # TODO: Move to new cog
-    @commands.slash_command(name='wall', description='Send a DroneOS announcement', guild_ids=guilds)
-    @permissions.has_role('Production')
-    async def wall(self, ctx: ApplicationContext, message: Option(str, required=True)):
-        db_drone = get_drone(ctx.author.id)
-        if not db_drone:
-            await ctx.respond('`Access denied`', ephemeral=True)
-            return
-        droneid = db_drone['droneid']
-        await ctx.respond(
-            f"""```
-Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')}):
-
-{message}```"""
-        )
-
     @commands.Cog.listener()
     async def on_message(self, msg: discord.Message):
         if not msg.content:
@@ -79,6 +63,12 @@ Broadcast message from {droneid}@DroneOS (pts/0) ({datetime.now().strftime('%c')
         attempted_content = aget(attempted_chat, 1, None)
 
         db_drone = get_drone(msg.author.id)
+
+        if db_drone and db_drone.get('config', {}).get('ssh', False) is not False:
+            d = get_drone(db_drone['config']['ssh'])
+            msg.author = msg.guild.get_member(d.discordid)
+            await self.send_as_drone(d, hook, msg)
+            return
 
         if attempted_droneid and not attempted_content:
             # Malformed attempt, yeet it.

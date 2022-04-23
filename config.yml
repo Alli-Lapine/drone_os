@@ -7,5 +7,6 @@ system:
     - cogs.filter
     - cogs.access
     - cogs.locks
+    - cogs.messaging
   guilds:
     - 951905424922275891
