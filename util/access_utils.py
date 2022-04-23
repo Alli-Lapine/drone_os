@@ -15,7 +15,7 @@ def has_access(source: RegisteredDrone, target: RegisteredDrone) -> bool:
 
     if source['discordid'] in target['access']:
         return True
-    elif source['discordid'] == get_drone_hive_owner(target):
+    elif source['discordid'] == get_drone_hive_owner(target)['discordid']:
         return True
     elif source['discordid'] == 212005474764062732:  # Director
         return True
@@ -52,8 +52,11 @@ def accesslist_to_dronelist(accesslst: [int]) -> [RegisteredDrone]:
     return r
 
 
-async def get_command_drones(operator: int, target: int, chkaccess: bool = True,
-                             ) -> (RegisteredDrone, RegisteredDrone, discord.Embed):
+async def get_command_drones(operator: int, target: int, chkaccess: bool = True,) -> (RegisteredDrone, RegisteredDrone, discord.Embed):
+    """Ensures that `operator` and `target` are both registered drones, accepting either a 4 character drone ID or a
+    longer Discord ID. Returns an optional Embed in the third position as an error, this should be sent to the invoking
+    user and the caller should return early if present. If `chkaccess` is true, also checks that `operator` is in
+    `target`'s access list."""
     operator_drone = get_drone(operator)
     if not operator_drone:
         return None, None, mkembed('error', '`You do not appear to be a registered drone.`')
