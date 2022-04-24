@@ -1,6 +1,6 @@
 system:
   log_level: DEBUG
-  bot_token: OTU2NzExNjU0NzYxMDYyNDMy.Yj0NKQ.EJY6_9_68yuSc5iAOJWPCEIJmXs
+  bot_token: YOURTOKENHERE
   command_prefix: '!'
   plugins:
     - cogs.registration
