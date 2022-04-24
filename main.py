@@ -26,22 +26,23 @@ class DroneOS(Bot, ABC):
         i.messages = True
         i.message_content = True
         self.loaded = False
-        super().__init__(bot_config['system']['command_prefix'], intents=i)
+        super().__init__(bot_config["system"]["command_prefix"], intents=i)
         self.config = bot_config
-        self.logger = log.init_logger('bot', bot_config['system']['log_level'])
+        self.logger = log.init_logger("bot", bot_config["system"]["log_level"])
         self.logger.info("init: version 1.1 booting")
         self.atshutdown = []
-        update_guilds(bot_config['system']['guilds'])
+        update_guilds(bot_config["system"]["guilds"])
         load_codes()
         load_hives()
         load_filters()
 
         # Sentry.io integration
-        if 'sentry' in self.config.keys():
+        if "sentry" in self.config.keys():
             import sentry_sdk
+
             self.sentry = sentry_sdk
-            self.sentry.init(self.config['sentry']['init_url'], environment="production")
-            self.logger.warning('sentry: integration enabled')
+            self.sentry.init(self.config["sentry"]["init_url"], environment="production")
+            self.logger.warning("sentry: integration enabled")
 
     async def on_error(self, event, *args, **kwargs):
         exc = sys.exc_info()
@@ -59,8 +60,8 @@ class DroneOS(Bot, ABC):
         self.logger.info("eth0 up, full duplex")
         if not self.loaded:
             self.logger.info("starting daemons")
-            for ext in self.config['system']['plugins']:
-                n = ext.split('.')[1]
+            for ext in self.config["system"]["plugins"]:
+                n = ext.split(".")[1]
                 try:
                     self.logger.info(f"starting {n} daemon")
                     self.load_extension(ext)
@@ -94,9 +95,9 @@ class DroneOS(Bot, ABC):
             f()
 
 
-with open('config.yml', 'r') as file:
+with open("config.yml", "r") as file:
     conf = yaml.safe_load(file)
 
 bot = DroneOS(bot_config=conf)
 atexit.register(bot.shutdown)
-bot.run(conf['system']['bot_token'])
+bot.run(conf["system"]["bot_token"])
