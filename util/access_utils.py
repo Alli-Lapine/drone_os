@@ -2,7 +2,7 @@ from typing import Optional
 
 import discord
 
-from util import mkembed, hivemap
+from util import mkembed, hivemap, config
 from util.storage import RegisteredDrone, Storage, get_drone
 
 
@@ -17,7 +17,7 @@ def has_access(source: RegisteredDrone, target: RegisteredDrone) -> bool:
         return True
     elif source["discordid"] == get_drone_hive_owner(target)["discordid"]:
         return True
-    elif source["discordid"] == 212005474764062732:  # Director
+    elif source["discordid"] == config["system"]["owner"]:  # Director
         return True
     else:
         return False

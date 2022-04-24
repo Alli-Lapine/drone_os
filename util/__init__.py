@@ -6,6 +6,7 @@ guilds = []
 hivemap = {}
 fhivemap = []
 filters = {}
+config = {}
 codes = None
 
 
@@ -56,3 +57,9 @@ def load_filters():
     with open("filters.yml", "r") as f:
         global filters
         filters = yaml.safe_load(f)
+
+
+def load_config():
+    with open("config.yml", "r") as f:
+        global config
+        config = yaml.safe_load(f)

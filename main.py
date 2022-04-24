@@ -8,7 +8,7 @@ import discord
 import yaml
 from discord.ext.commands.bot import Bot
 
-from util import log, update_guilds, load_codes, load_hives, load_filters
+from util import log, update_guilds, load_codes, load_hives, load_filters, load_config
 
 
 # noinspection PyDunderSlots
@@ -29,12 +29,13 @@ class DroneOS(Bot, ABC):
         super().__init__(bot_config["system"]["command_prefix"], intents=i)
         self.config = bot_config
         self.logger = log.init_logger("bot", bot_config["system"]["log_level"])
-        self.logger.info("init: version 1.1 booting")
+        self.logger.info("init: version 1.2 booting")
         self.atshutdown = []
         update_guilds(bot_config["system"]["guilds"])
         load_codes()
         load_hives()
         load_filters()
+        load_config()  # For usage in util packages
 
         # Sentry.io integration
         if "sentry" in self.config.keys():
