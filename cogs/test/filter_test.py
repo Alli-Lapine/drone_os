@@ -1,13 +1,18 @@
 import pytest
 from unittest.mock import AsyncMock, ANY
-from cogs.filter import Filter
 from util.storage import Storage, RegisteredDrone, DroneChannel
+from util import load_codes, load_hives, load_filters
 
 
 @pytest.fixture
 def filterplugin():
     bot = AsyncMock()
     bot.logger = AsyncMock()
+    load_codes()
+    load_hives()
+    load_filters()
+    from cogs.filter import Filter
+
     return Filter(bot=bot)
 
 
@@ -29,7 +34,9 @@ def msg():
 
 @pytest.fixture
 def normaldrone():
-    drone1 = RegisteredDrone({"discordid": 100000000000000001, "droneid": "0001"})
+    drone1 = RegisteredDrone(
+        {"discordid": 100000000000000001, "droneid": "TSTN", "hive": "lapine/unaffiliated"}
+    )
     Storage.backend.save(drone1)
     yield 100000000000000001
     Storage.backend.delete(drone1)
@@ -38,7 +45,12 @@ def normaldrone():
 @pytest.fixture
 def enforcedrone():
     drone1 = RegisteredDrone(
-        {"discordid": 100000000000000041, "droneid": "0041", "config": {"enforce": True}}
+        {
+            "discordid": 100000000000000041,
+            "droneid": "TSTE",
+            "config": {"enforce": True},
+            "hive": "lapine/unaffiliated",
+        }
     )
     Storage.backend.save(drone1)
     yield 100000000000000041
@@ -64,11 +76,11 @@ def enforceallchan():
 @pytest.mark.asyncio
 class TestFilterLogic:
     async def test_sends_normal_msg(self, filterplugin, hook, msg, normaldrone):
-        msg.configure_mock(content="0001 :: Y helo thar")
+        msg.configure_mock(content="TSTN :: Y helo thar")
         msg.author.id = normaldrone
         await filterplugin.drone_filter_handler(msg, hook)
         hook.send.assert_called_with(
-            username=ANY, content="0001 :: ☼ :: Y helo thar", avatar_url=ANY
+            username=ANY, content="TSTN :: ☼ :: Y helo thar", avatar_url=ANY, embed=ANY
         )
         msg.delete.assert_called()
 
@@ -96,23 +108,23 @@ class TestFilterLogic:
         msg.delete.assert_called()
 
     async def test_sends_in_droneenforce(self, filterplugin, hook, msg, enforcedrone):
-        msg.configure_mock(content="0041 :: Y helo thar")
+        msg.configure_mock(content="TSTE :: Y helo thar")
         msg.author.id = enforcedrone
         await filterplugin.drone_filter_handler(msg, hook)
         hook.send.assert_called_with(
-            username=ANY, content="0041 :: ☼ :: Y helo thar", avatar_url=ANY
+            username=ANY, content="TSTE :: ☼ :: Y helo thar", avatar_url=ANY, embed=ANY
         )
         msg.delete.assert_called()
 
     async def test_sends_in_chanenforce(
         self, filterplugin, hook, msg, normaldrone, enforcedronechan
     ):
-        msg.configure_mock(content="0001 :: Y helo thar")
+        msg.configure_mock(content="TSTN :: Y helo thar")
         msg.author.id = normaldrone
         msg.channel.id = enforcedronechan
         await filterplugin.drone_filter_handler(msg, hook)
         hook.send.assert_called_with(
-            username=ANY, content="0001 :: ☼ :: Y helo thar", avatar_url=ANY
+            username=ANY, content="TSTN :: ☼ :: Y helo thar", avatar_url=ANY, embed=ANY
         )
         msg.delete.assert_called()
 
@@ -157,11 +169,11 @@ class TestFilterLogic:
     async def test_sends_in_chanenforceall(
         self, filterplugin, hook, msg, normaldrone, enforceallchan
     ):
-        msg.configure_mock(content="0001 :: Y helo thar")
+        msg.configure_mock(content="TSTN :: Y helo thar")
         msg.author.id = normaldrone
         msg.channel.id = enforceallchan
         await filterplugin.drone_filter_handler(msg, hook)
         hook.send.assert_called_with(
-            username=ANY, content="0001 :: ☼ :: Y helo thar", avatar_url=ANY
+            username=ANY, content="TSTN :: ☼ :: Y helo thar", avatar_url=ANY, embed=ANY
         )
         msg.delete.assert_called()
