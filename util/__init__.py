@@ -1,6 +1,7 @@
 import discord
 from typing import Any, Union
 import yaml
+import os
 
 guilds = []
 hivemap = {}
@@ -40,9 +41,11 @@ def aget(listlike: Union[list, tuple], index: int, default: Any) -> Any:
 
 def load_codes():
     """Populates util.codes with the contents of codes.yml"""
-    with open("codes.yml", "r") as f:
-        global codes
-        codes = yaml.safe_load(f)
+    global codes
+    codes = {}
+    for codefiles in os.listdir("codes"):
+        with open(os.path.join("codes", codefiles), 'r') as f:
+            codes.update(yaml.safe_load(f))
 
 
 def load_hives():
