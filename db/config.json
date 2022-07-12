@@ -1,0 +1,1 @@
+{"indexes": {"registereddrone": {"pk": {"key": "pk", "id": "ad4e7832795c4941ba8426f786db30fd"}}, "dronechannel": {"pk": {"key": "pk", "id": "0750a9994827483eb55cd45306176328"}}}, "store_class": "transactional", "index_class": "transactional", "index_store_class": "basic", "serializer_class": "json", "autocommit": false, "version": "0.2.12"}

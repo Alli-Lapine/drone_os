@@ -1,4 +1,6 @@
 .pytest_cache
 db/
+cogs/__pycache__/
+util/__pycache__/
 .idea
 config.yml
