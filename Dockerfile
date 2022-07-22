@@ -1,4 +1,4 @@
-FROM karunamon/python3-pipenv-alpine:latest
+FROM nuvandibe/python3-pipenv-alpine:latest
 COPY . /app
 WORKDIR /app
 VOLUME /app/db
